@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const GAS_URL =
@@ -88,6 +88,40 @@ function shuffle(array) {
   return [...array].sort(() => Math.random() - 0.5);
 }
 
+function playSound(type) {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    const audioContext = new AudioContext();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+
+    if (type === "correct") {
+      oscillator.frequency.value = 880;
+    } else if (type === "wrong") {
+      oscillator.frequency.value = 180;
+    } else if (type === "start") {
+      oscillator.frequency.value = 520;
+    } else {
+      oscillator.frequency.value = 660;
+    }
+
+    oscillator.type = "sine";
+    gainNode.gain.setValueAtTime(0.08, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(
+      0.001,
+      audioContext.currentTime + 0.18
+    );
+
+    oscillator.start();
+    oscillator.stop(audioContext.currentTime + 0.18);
+  } catch (error) {
+    console.log("효과음 재생 오류", error);
+  }
+}
+
 async function saveToSheet(payload) {
   if (!GAS_URL) return;
 
@@ -119,8 +153,10 @@ export default function AiFarmMathMissionReact() {
   const [combo, setCombo] = useState(0);
   const [saved, setSaved] = useState(false);
 
+  const savedSecondsRef = useRef(0);
+
   const mission = missions[current];
-  const progress = Math.round((current / missions.length) * 100);
+  const progress = Math.round(((current + 1) / missions.length) * 100);
 
   const choices = useMemo(() => {
     return mission ? shuffle(mission.choices) : [];
@@ -130,13 +166,17 @@ export default function AiFarmMathMissionReact() {
     if (screen !== "game") return;
 
     const timer = setInterval(() => {
-      setSeconds((s) => s + 1);
+      setSeconds((s) => {
+        savedSecondsRef.current = s + 1;
+        return s + 1;
+      });
     }, 1000);
 
     return () => clearInterval(timer);
   }, [screen]);
 
   const startGame = () => {
+    playSound("start");
     setScreen("game");
     setCurrent(0);
     setScore(0);
@@ -146,6 +186,7 @@ export default function AiFarmMathMissionReact() {
     setSelected(null);
     setFeedback("");
     setSeconds(0);
+    savedSecondsRef.current = 0;
     setCombo(0);
     setSaved(false);
   };
@@ -157,13 +198,14 @@ export default function AiFarmMathMissionReact() {
     nextCodes = codes,
     nextBadges = badges
   ) => {
+    playSound(success ? "correct" : "wrong");
     setScreen(success ? "success" : "fail");
 
     const payload = {
       name: name || "수학 탐험가",
       score: nextScore,
       life: nextLife,
-      time: seconds,
+      time: savedSecondsRef.current,
       success: success ? "성공" : "실패",
       code: nextCodes.join("-"),
       badges: nextBadges.join(" "),
@@ -183,6 +225,8 @@ export default function AiFarmMathMissionReact() {
     const isCorrect = choice === mission.answer;
 
     if (isCorrect) {
+      playSound("correct");
+
       const nextCombo = combo + 1;
       const bonus = nextCombo >= 3 ? 5 : 0;
       const nextScore = score + 10 + bonus;
@@ -204,8 +248,10 @@ export default function AiFarmMathMissionReact() {
         } else {
           setCurrent((c) => c + 1);
         }
-      }, 900);
+      }, 700);
     } else {
+      playSound("wrong");
+
       const nextLife = life - 1;
 
       setLife(nextLife);
@@ -219,7 +265,7 @@ export default function AiFarmMathMissionReact() {
         if (nextLife <= 0) {
           finishGame(false, score, nextLife, codes, badges);
         }
-      }, 1000);
+      }, 800);
     }
   };
 
@@ -228,14 +274,14 @@ export default function AiFarmMathMissionReact() {
   };
 
   return (
-    <div className="min-h-screen overflow-hidden bg-gradient-to-br from-emerald-200 via-sky-200 to-indigo-300 p-3 text-slate-800 md:p-8">
+    <div className="h-screen w-screen overflow-hidden bg-gradient-to-br from-emerald-200 via-sky-200 to-indigo-300 p-2 text-slate-800 sm:p-3">
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        {[...Array(18)].map((_, i) => (
+        {[...Array(12)].map((_, i) => (
           <motion.div
             key={i}
-            className="absolute text-2xl opacity-50"
+            className="absolute text-xl opacity-45"
             initial={{
-              y: "110vh",
+              y: "105vh",
               x: `${Math.random() * 100}vw`,
               rotate: 0,
             }}
@@ -244,7 +290,7 @@ export default function AiFarmMathMissionReact() {
               rotate: 360,
             }}
             transition={{
-              duration: 10 + Math.random() * 12,
+              duration: 10 + Math.random() * 10,
               repeat: Infinity,
               delay: Math.random() * 7,
             }}
@@ -254,19 +300,19 @@ export default function AiFarmMathMissionReact() {
         ))}
       </div>
 
-      <main className="relative mx-auto max-w-6xl">
+      <main className="relative mx-auto flex h-full max-w-6xl items-center justify-center">
         <motion.div
-          initial={{ opacity: 0, y: 18 }}
+          initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="overflow-hidden rounded-[2rem] border-4 border-white/80 bg-white/90 shadow-2xl backdrop-blur"
+          className="flex h-[98vh] w-full flex-col overflow-hidden rounded-[1.6rem] border-4 border-white/80 bg-white/90 shadow-2xl backdrop-blur"
         >
-          <section className="bg-gradient-to-r from-emerald-500 to-sky-500 p-5 text-white md:p-8">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <section className="shrink-0 bg-gradient-to-r from-emerald-500 to-sky-500 px-5 py-4 text-white md:px-7 md:py-5">
+            <div className="flex items-center justify-between gap-3">
               <div>
-                <h1 className="text-3xl font-black tracking-tight md:text-5xl">
+                <h1 className="text-2xl font-black tracking-tight md:text-4xl">
                   🌱 AI 농장 대탈출
                 </h1>
-                <p className="mt-2 text-base font-semibold opacity-95 md:text-xl">
+                <p className="mt-1 text-sm font-semibold opacity-95 md:text-lg">
                   곱셈 미션 · 세 자리 수 × 몇십몇 · 왕곡초 4학년 2반
                 </p>
               </div>
@@ -274,14 +320,14 @@ export default function AiFarmMathMissionReact() {
               <motion.div
                 animate={{ rotate: [0, -6, 6, 0] }}
                 transition={{ repeat: Infinity, duration: 2.4 }}
-                className="text-6xl md:text-7xl"
+                className="text-4xl md:text-6xl"
               >
                 🤖
               </motion.div>
             </div>
           </section>
 
-          <section className="p-4 md:p-8">
+          <section className="min-h-0 flex-1 overflow-hidden p-3 md:p-5">
             <AnimatePresence mode="wait">
               {screen === "start" && (
                 <motion.div
@@ -289,48 +335,48 @@ export default function AiFarmMathMissionReact() {
                   initial={{ opacity: 0, scale: 0.98 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.98 }}
-                  className="grid gap-6 md:grid-cols-[1.2fr_.8fr]"
+                  className="grid h-full gap-4 md:grid-cols-[1.2fr_.8fr]"
                 >
-                  <div className="rounded-3xl bg-amber-50 p-6 shadow-lg ring-2 ring-amber-200">
-                    <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-red-100 px-4 py-2 font-black text-red-600">
+                  <div className="flex flex-col justify-center rounded-3xl bg-amber-50 p-5 shadow-lg ring-2 ring-amber-200">
+                    <div className="mb-3 inline-flex w-fit items-center gap-2 rounded-full bg-red-100 px-4 py-2 text-sm font-black text-red-600">
                       <span>⚡</span>
                       긴급 상황 발생!
                     </div>
 
-                    <h2 className="text-2xl font-black md:text-4xl">
+                    <h2 className="text-2xl font-black md:text-3xl">
                       AI 농장의 물 절약 시스템이 멈췄어요!
                     </h2>
 
-                    <p className="mt-4 text-lg leading-8">
+                    <p className="mt-3 text-base leading-7 md:text-lg">
                       곱셈 미션을 해결하고 에너지 배지와 탈출 코드를 모아
-                      농장을 복구하세요. 정답을 연속으로 맞히면 콤보
-                      보너스도 받을 수 있습니다.
+                      농장을 복구하세요. 정답을 연속으로 맞히면 콤보 보너스도
+                      받을 수 있습니다.
                     </p>
 
-                    <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                    <div className="mt-5 flex flex-col gap-3 sm:flex-row">
                       <input
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         placeholder="이름을 입력하세요"
-                        className="min-h-14 flex-1 rounded-2xl border-2 border-sky-200 px-5 text-lg font-bold outline-none focus:border-sky-500"
+                        className="min-h-12 flex-1 rounded-2xl border-2 border-sky-200 px-4 text-base font-bold outline-none focus:border-sky-500 md:text-lg"
                       />
 
                       <button
                         onClick={startGame}
-                        className="min-h-14 rounded-2xl bg-yellow-400 px-7 text-lg font-black text-yellow-950 shadow-[0_6px_0_#f08c00] active:translate-y-1 active:shadow-none"
+                        className="min-h-12 rounded-2xl bg-yellow-400 px-6 text-base font-black text-yellow-950 shadow-[0_5px_0_#f08c00] active:translate-y-1 active:shadow-none md:text-lg"
                       >
                         미션 시작 🚀
                       </button>
                     </div>
                   </div>
 
-                  <div className="rounded-3xl bg-slate-900 p-6 text-white shadow-lg">
+                  <div className="flex flex-col justify-center rounded-3xl bg-slate-900 p-5 text-white shadow-lg">
                     <h3 className="flex items-center gap-2 text-2xl font-black">
                       <span>🏆</span>
                       게임 규칙
                     </h3>
 
-                    <div className="mt-5 space-y-4 text-lg leading-7">
+                    <div className="mt-4 space-y-3 text-base leading-7 md:text-lg">
                       <p>❤️ 생명은 3개입니다.</p>
                       <p>⭐ 정답 1개당 10점입니다.</p>
                       <p>🔥 3연속 정답부터 콤보 보너스 +5점!</p>
@@ -346,8 +392,9 @@ export default function AiFarmMathMissionReact() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
+                  className="flex h-full flex-col overflow-hidden"
                 >
-                  <div className="grid gap-3 md:grid-cols-4">
+                  <div className="grid shrink-0 grid-cols-4 gap-2 md:gap-3">
                     <InfoCard
                       icon="👤"
                       label="탐험가"
@@ -362,32 +409,32 @@ export default function AiFarmMathMissionReact() {
                     <InfoCard icon="⏱️" label="시간" value={`${seconds}초`} />
                   </div>
 
-                  <div className="mt-5 h-5 overflow-hidden rounded-full bg-slate-200">
+                  <div className="mt-3 h-4 shrink-0 overflow-hidden rounded-full bg-slate-200">
                     <motion.div
                       className="h-full bg-gradient-to-r from-emerald-400 via-yellow-300 to-orange-400"
                       animate={{ width: `${progress}%` }}
                     />
                   </div>
 
-                  <div className="mt-6 grid gap-5 md:grid-cols-[220px_1fr]">
+                  <div className="mt-4 grid shrink-0 gap-4 md:grid-cols-[160px_1fr]">
                     <motion.div
-                      animate={{ y: [0, -12, 0] }}
+                      animate={{ y: [0, -8, 0] }}
                       transition={{ repeat: Infinity, duration: 2 }}
-                      className="flex min-h-44 items-center justify-center rounded-3xl bg-gradient-to-br from-sky-100 to-emerald-100 text-8xl shadow-inner"
+                      className="hidden min-h-32 items-center justify-center rounded-3xl bg-gradient-to-br from-sky-100 to-emerald-100 text-6xl shadow-inner md:flex"
                     >
                       {mission.emoji}
                     </motion.div>
 
-                    <div className="rounded-3xl bg-yellow-50 p-5 shadow ring-2 ring-yellow-200">
-                      <div className="mb-3 inline-flex rounded-full bg-white px-4 py-2 text-sm font-black text-sky-700 shadow">
+                    <div className="rounded-3xl bg-yellow-50 p-4 shadow ring-2 ring-yellow-200 md:col-auto">
+                      <div className="mb-2 inline-flex rounded-full bg-white px-3 py-1 text-xs font-black text-sky-700 shadow">
                         {current + 1} / {missions.length}
                       </div>
 
-                      <h2 className="text-2xl font-black md:text-3xl">
+                      <h2 className="text-xl font-black md:text-2xl">
                         {mission.title}
                       </h2>
 
-                      <p className="mt-3 text-lg leading-8">
+                      <p className="mt-2 text-sm leading-6 md:text-base">
                         {mission.story}
                       </p>
                     </div>
@@ -397,13 +444,13 @@ export default function AiFarmMathMissionReact() {
                     key={mission.question}
                     initial={{ x: 20, opacity: 0 }}
                     animate={{ x: 0, opacity: 1 }}
-                    className="mt-6 rounded-3xl bg-white p-6 shadow-lg ring-2 ring-sky-100"
+                    className="mt-4 min-h-0 flex-1 rounded-3xl bg-white p-4 shadow-lg ring-2 ring-sky-100"
                   >
-                    <div className="mb-4 text-2xl font-black text-cyan-700 md:text-4xl">
+                    <div className="mb-3 text-xl font-black text-cyan-700 md:text-3xl">
                       {mission.question}
                     </div>
 
-                    <div className="grid gap-4 md:grid-cols-2">
+                    <div className="grid gap-3 md:grid-cols-2">
                       {choices.map((choice) => {
                         const isChosen = selected === choice;
                         const isCorrect = choice === mission.answer;
@@ -421,7 +468,7 @@ export default function AiFarmMathMissionReact() {
                             key={choice}
                             disabled={!!selected}
                             onClick={() => chooseAnswer(choice)}
-                            className={`min-h-20 rounded-3xl p-5 text-left text-2xl font-black shadow-lg transition ${style}`}
+                            className={`min-h-14 rounded-2xl p-4 text-left text-xl font-black shadow-md transition md:min-h-16 md:text-2xl ${style}`}
                           >
                             {choice}
                           </button>
@@ -433,18 +480,18 @@ export default function AiFarmMathMissionReact() {
                       <motion.div
                         initial={{ scale: 0.9, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
-                        className="mt-5 rounded-2xl bg-slate-900 p-4 text-center text-xl font-black text-white"
+                        className="mt-3 rounded-2xl bg-slate-900 p-3 text-center text-base font-black text-white md:text-lg"
                       >
                         {feedback}
                       </motion.div>
                     )}
                   </motion.div>
 
-                  <div className="mt-5 flex flex-wrap gap-2">
-                    {badges.map((badge, i) => (
+                  <div className="mt-2 flex shrink-0 flex-wrap gap-2">
+                    {badges.slice(-4).map((badge, i) => (
                       <span
                         key={i}
-                        className="rounded-full bg-emerald-100 px-4 py-2 font-black text-emerald-700 shadow-sm"
+                        className="rounded-full bg-emerald-100 px-3 py-1 text-sm font-black text-emerald-700 shadow-sm"
                       >
                         {badge}
                       </span>
@@ -458,7 +505,7 @@ export default function AiFarmMathMissionReact() {
                   key="result"
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="rounded-3xl bg-white p-6 text-center shadow-xl ring-2 ring-sky-100"
+                  className="flex h-full flex-col justify-center rounded-3xl bg-white p-5 text-center shadow-xl ring-2 ring-sky-100"
                 >
                   {screen === "success" ? (
                     <>
@@ -468,58 +515,57 @@ export default function AiFarmMathMissionReact() {
                           scale: [1, 1.1, 1],
                         }}
                         transition={{ repeat: Infinity, duration: 2 }}
-                        className="text-8xl"
+                        className="text-6xl"
                       >
                         🏆
                       </motion.div>
 
-                      <h2 className="mt-4 text-4xl font-black text-emerald-600">
+                      <h2 className="mt-2 text-3xl font-black text-emerald-600">
                         AI 농장 복구 성공!
                       </h2>
                     </>
                   ) : (
                     <>
-                      <div className="text-8xl">😢</div>
+                      <div className="text-6xl">😢</div>
 
-                      <h2 className="mt-4 text-4xl font-black text-red-500">
+                      <h2 className="mt-2 text-3xl font-black text-red-500">
                         농장 복구 실패!
                       </h2>
                     </>
                   )}
 
-                  <div className="mx-auto mt-6 grid max-w-3xl gap-3 md:grid-cols-3">
+                  <div className="mx-auto mt-4 grid w-full max-w-3xl gap-3 md:grid-cols-3">
                     <ResultCard label="이름" value={name || "수학 탐험가"} />
                     <ResultCard label="점수" value={`${score}점`} />
                     <ResultCard label="시간" value={`${seconds}초`} />
                   </div>
 
-                  <div className="mx-auto mt-6 max-w-3xl rounded-3xl bg-slate-900 p-5 text-white">
+                  <div className="mx-auto mt-4 w-full max-w-3xl rounded-3xl bg-slate-900 p-4 text-white">
                     <p className="text-sm font-bold text-slate-300">
                       탈출 코드
                     </p>
 
-                    <p className="mt-2 text-4xl font-black tracking-[.25em] text-emerald-300">
+                    <p className="mt-1 text-3xl font-black tracking-[.25em] text-emerald-300">
                       {codes.join("-") || "없음"}
                     </p>
                   </div>
 
-                  <div className="mx-auto mt-6 max-w-3xl rounded-3xl bg-amber-50 p-5 text-left ring-2 ring-amber-200">
-                    <h3 className="text-2xl font-black">
+                  <div className="mx-auto mt-4 w-full max-w-3xl rounded-3xl bg-amber-50 p-4 text-left ring-2 ring-amber-200">
+                    <h3 className="text-xl font-black">
                       📘 배움공책 정리 미션
                     </h3>
 
-                    <ol className="mt-3 list-decimal space-y-2 pl-6 text-lg font-semibold leading-8">
+                    <ol className="mt-2 list-decimal space-y-1 pl-6 text-base font-semibold leading-7">
                       <li>138×32를 세로셈으로 계산하는 방법 쓰기</li>
                       <li>오늘 틀렸거나 헷갈린 문제 1개 다시 풀기</li>
                       <li>세 자리 수 × 몇십몇 계산에서 조심할 점 쓰기</li>
                     </ol>
 
-                    <p className="mt-4 font-black text-sky-700">
-                      ✅ 이 결과 화면을 캡처해서 Teams 또는 Google Classroom에
-                      제출하세요.
+                    <p className="mt-2 font-black text-sky-700">
+                      ✅ 이 결과 화면을 캡처해서 제출하세요.
                     </p>
 
-                    <p className="mt-1 text-sm text-slate-500">
+                    <p className="mt-1 text-xs text-slate-500">
                       구글시트 저장 상태:{" "}
                       {saved ? "저장 요청 완료" : "저장 중"}
                     </p>
@@ -527,7 +573,7 @@ export default function AiFarmMathMissionReact() {
 
                   <button
                     onClick={reset}
-                    className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-yellow-400 px-7 py-4 text-lg font-black text-yellow-950 shadow-[0_6px_0_#f08c00] active:translate-y-1 active:shadow-none"
+                    className="mx-auto mt-4 inline-flex items-center gap-2 rounded-2xl bg-yellow-400 px-6 py-3 text-base font-black text-yellow-950 shadow-[0_5px_0_#f08c00] active:translate-y-1 active:shadow-none"
                   >
                     <span>🔄</span>
                     다시 도전하기
@@ -544,19 +590,23 @@ export default function AiFarmMathMissionReact() {
 
 function InfoCard({ icon, label, value }) {
   return (
-    <div className="rounded-2xl bg-white p-4 text-center shadow ring-1 ring-slate-100">
-      <div className="text-2xl">{icon}</div>
-      <div className="mt-1 text-xs font-black text-slate-400">{label}</div>
-      <div className="mt-1 text-lg font-black">{value}</div>
+    <div className="rounded-2xl bg-white p-2 text-center shadow ring-1 ring-slate-100 md:p-3">
+      <div className="text-xl md:text-2xl">{icon}</div>
+      <div className="mt-0.5 text-[10px] font-black text-slate-400 md:text-xs">
+        {label}
+      </div>
+      <div className="mt-0.5 truncate text-sm font-black md:text-lg">
+        {value}
+      </div>
     </div>
   );
 }
 
 function ResultCard({ label, value }) {
   return (
-    <div className="rounded-2xl bg-sky-50 p-4 shadow-sm ring-1 ring-sky-100">
+    <div className="rounded-2xl bg-sky-50 p-3 shadow-sm ring-1 ring-sky-100">
       <p className="text-sm font-black text-sky-600">{label}</p>
-      <p className="mt-1 text-2xl font-black">{value}</p>
+      <p className="mt-1 text-xl font-black">{value}</p>
     </div>
   );
 }
