@@ -41,8 +41,7 @@ const missions = [
   {
     title: "미션 4. 씨앗 로봇을 깨워라!",
     emoji: "🌰",
-    story:
-      "씨앗 로봇이 잠들었어요. 곱셈 암호를 풀면 다시 움직입니다.",
+    story: "씨앗 로봇이 잠들었어요. 곱셈 암호를 풀면 다시 움직입니다.",
     question: "107 × 22 = ?",
     choices: ["2354", "2254", "2344", "2454"],
     answer: "2354",
@@ -108,15 +107,16 @@ function playSound(type) {
       oscillator.frequency.value = 660;
     }
 
-    oscillator.type = "sine";
-    gainNode.gain.setValueAtTime(0.08, audioContext.currentTime);
+    oscillator.type = "square";
+
+    gainNode.gain.setValueAtTime(0.45, audioContext.currentTime);
     gainNode.gain.exponentialRampToValueAtTime(
       0.001,
-      audioContext.currentTime + 0.18
+      audioContext.currentTime + 0.25
     );
 
     oscillator.start();
-    oscillator.stop(audioContext.currentTime + 0.18);
+    oscillator.stop(audioContext.currentTime + 0.25);
   } catch (error) {
     console.log("효과음 재생 오류", error);
   }
@@ -274,12 +274,12 @@ export default function AiFarmMathMissionReact() {
   };
 
   return (
-    <div className="h-screen w-screen overflow-hidden bg-gradient-to-br from-emerald-200 via-sky-200 to-indigo-300 p-2 text-slate-800 sm:p-3">
+    <div className="h-screen w-screen overflow-hidden bg-gradient-to-br from-emerald-200 via-sky-200 to-indigo-300 p-1 text-slate-800 sm:p-2">
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        {[...Array(12)].map((_, i) => (
+        {[...Array(10)].map((_, i) => (
           <motion.div
             key={i}
-            className="absolute text-xl opacity-45"
+            className="absolute text-xl opacity-40"
             initial={{
               y: "105vh",
               x: `${Math.random() * 100}vw`,
@@ -300,13 +300,13 @@ export default function AiFarmMathMissionReact() {
         ))}
       </div>
 
-      <main className="relative mx-auto flex h-full max-w-6xl items-center justify-center">
+      <main className="relative mx-auto flex h-full max-w-7xl items-center justify-center">
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex h-[98vh] w-full flex-col overflow-hidden rounded-[1.6rem] border-4 border-white/80 bg-white/90 shadow-2xl backdrop-blur"
+          className="flex h-full w-full flex-col overflow-hidden rounded-[1.4rem] border-4 border-white/80 bg-white/90 shadow-2xl backdrop-blur"
         >
-          <section className="shrink-0 bg-gradient-to-r from-emerald-500 to-sky-500 px-5 py-4 text-white md:px-7 md:py-5">
+          <section className="shrink-0 bg-gradient-to-r from-emerald-500 to-sky-500 px-4 py-3 text-white md:px-6 md:py-4">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h1 className="text-2xl font-black tracking-tight md:text-4xl">
@@ -327,7 +327,7 @@ export default function AiFarmMathMissionReact() {
             </div>
           </section>
 
-          <section className="min-h-0 flex-1 overflow-hidden p-3 md:p-5">
+          <section className="min-h-0 flex-1 overflow-hidden p-2 md:p-4">
             <AnimatePresence mode="wait">
               {screen === "start" && (
                 <motion.div
@@ -335,7 +335,7 @@ export default function AiFarmMathMissionReact() {
                   initial={{ opacity: 0, scale: 0.98 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.98 }}
-                  className="grid h-full gap-4 md:grid-cols-[1.2fr_.8fr]"
+                  className="grid h-full gap-3 md:grid-cols-[1.2fr_.8fr]"
                 >
                   <div className="flex flex-col justify-center rounded-3xl bg-amber-50 p-5 shadow-lg ring-2 ring-amber-200">
                     <div className="mb-3 inline-flex w-fit items-center gap-2 rounded-full bg-red-100 px-4 py-2 text-sm font-black text-red-600">
@@ -409,24 +409,24 @@ export default function AiFarmMathMissionReact() {
                     <InfoCard icon="⏱️" label="시간" value={`${seconds}초`} />
                   </div>
 
-                  <div className="mt-3 h-4 shrink-0 overflow-hidden rounded-full bg-slate-200">
+                  <div className="mt-2 h-4 shrink-0 overflow-hidden rounded-full bg-slate-200">
                     <motion.div
                       className="h-full bg-gradient-to-r from-emerald-400 via-yellow-300 to-orange-400"
                       animate={{ width: `${progress}%` }}
                     />
                   </div>
 
-                  <div className="mt-4 grid shrink-0 gap-4 md:grid-cols-[160px_1fr]">
+                  <div className="mt-3 grid shrink-0 gap-3 md:grid-cols-[145px_1fr]">
                     <motion.div
                       animate={{ y: [0, -8, 0] }}
                       transition={{ repeat: Infinity, duration: 2 }}
-                      className="hidden min-h-32 items-center justify-center rounded-3xl bg-gradient-to-br from-sky-100 to-emerald-100 text-6xl shadow-inner md:flex"
+                      className="hidden min-h-28 items-center justify-center rounded-3xl bg-gradient-to-br from-sky-100 to-emerald-100 text-6xl shadow-inner md:flex"
                     >
                       {mission.emoji}
                     </motion.div>
 
-                    <div className="rounded-3xl bg-yellow-50 p-4 shadow ring-2 ring-yellow-200 md:col-auto">
-                      <div className="mb-2 inline-flex rounded-full bg-white px-3 py-1 text-xs font-black text-sky-700 shadow">
+                    <div className="rounded-3xl bg-yellow-50 p-3 shadow ring-2 ring-yellow-200">
+                      <div className="mb-1 inline-flex rounded-full bg-white px-3 py-1 text-xs font-black text-sky-700 shadow">
                         {current + 1} / {missions.length}
                       </div>
 
@@ -434,7 +434,7 @@ export default function AiFarmMathMissionReact() {
                         {mission.title}
                       </h2>
 
-                      <p className="mt-2 text-sm leading-6 md:text-base">
+                      <p className="mt-1 text-sm leading-6 md:text-base">
                         {mission.story}
                       </p>
                     </div>
@@ -444,13 +444,13 @@ export default function AiFarmMathMissionReact() {
                     key={mission.question}
                     initial={{ x: 20, opacity: 0 }}
                     animate={{ x: 0, opacity: 1 }}
-                    className="mt-4 min-h-0 flex-1 rounded-3xl bg-white p-4 shadow-lg ring-2 ring-sky-100"
+                    className="mt-3 min-h-0 flex-1 overflow-hidden rounded-3xl bg-white p-3 shadow-lg ring-2 ring-sky-100"
                   >
-                    <div className="mb-3 text-xl font-black text-cyan-700 md:text-3xl">
+                    <div className="mb-2 text-xl font-black text-cyan-700 md:text-3xl">
                       {mission.question}
                     </div>
 
-                    <div className="grid gap-3 md:grid-cols-2">
+                    <div className="grid gap-2 md:grid-cols-2">
                       {choices.map((choice) => {
                         const isChosen = selected === choice;
                         const isCorrect = choice === mission.answer;
@@ -468,7 +468,7 @@ export default function AiFarmMathMissionReact() {
                             key={choice}
                             disabled={!!selected}
                             onClick={() => chooseAnswer(choice)}
-                            className={`min-h-14 rounded-2xl p-4 text-left text-xl font-black shadow-md transition md:min-h-16 md:text-2xl ${style}`}
+                            className={`min-h-12 rounded-2xl p-3 text-left text-xl font-black shadow-md transition md:min-h-14 md:text-2xl ${style}`}
                           >
                             {choice}
                           </button>
@@ -480,7 +480,7 @@ export default function AiFarmMathMissionReact() {
                       <motion.div
                         initial={{ scale: 0.9, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
-                        className="mt-3 rounded-2xl bg-slate-900 p-3 text-center text-base font-black text-white md:text-lg"
+                        className="mt-2 rounded-2xl bg-slate-900 p-2 text-center text-base font-black text-white md:text-lg"
                       >
                         {feedback}
                       </motion.div>
@@ -505,7 +505,7 @@ export default function AiFarmMathMissionReact() {
                   key="result"
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="flex h-full flex-col justify-center rounded-3xl bg-white p-5 text-center shadow-xl ring-2 ring-sky-100"
+                  className="flex h-full flex-col justify-center rounded-3xl bg-white p-4 text-center shadow-xl ring-2 ring-sky-100"
                 >
                   {screen === "success" ? (
                     <>
